@@ -1,0 +1,113 @@
+import codecs
+import re
+import xlwt
+import easygui as e
+import string
+import os
+import tkinter as tk
+from tkinter import filedialog
+from tkinter import *
+
+
+def pressx():
+    root1 = tk.Tk()
+    root1.title("press price")
+    root1.geometry('300x300')   # 是x 不是*
+
+    l1 = Label(root1, text="xls名：")
+    l1.pack()  # 这里的side可以赋值为LEFT  RTGHT TOP  BOTTOM
+    xls_text = StringVar()
+    xls = Entry(root1, textvariable = xls_text)
+    xls_text.set(" ")
+    xls.pack()
+
+    def on_click():
+        x = xls_text.get()
+        return x
+    Button(root1, text="press", command=on_click).pack()
+
+
+
+
+
+
+def set_style(name, height, bold=False):
+    style = xlwt.XFStyle()  # 初始化样式
+
+    font = xlwt.Font()  # 为样式创建字体
+    font.name = name  # 'Times New Roman'
+    font.bold = bold
+    font.color_index = 4
+    font.height = height
+    style.font = font
+    return style
+
+
+if __name__ == '__main__':
+
+    root = tk.Tk()
+    root.withdraw()
+
+    file_path = filedialog.askopenfilenames()
+    # 创建excel表格
+    f = xlwt.Workbook()  # 创建工作簿
+    sheet1 = f.add_sheet(u'sheet1', cell_overwrite_ok=True)  # 创建sheet
+    row0 = [u'工件名称', u'名称', u'刀号', u'刀长', u'柄径', u'时间', u'合计', '折合（H）', u'价格/H', u'折合单价（元）']
+    rown = 0
+    # 生成第一行
+    for i in range(0, len(row0)):
+        sheet1.write(rown, i, row0[i], set_style('Times New Roman', 100000, True))
+    rown += 1
+    filen = 0
+
+
+
+    for paths in file_path:
+        price = e.enterbox(msg=os.path.basename(paths), title='请输入价格', default='70', strip=1, image=0, root=0)
+        #print(price)
+        inDate = codecs.open(paths, 'r', 'gbk').readlines()
+        dataSet = list()
+        signal = 0
+        for line in inDate:
+            line = line.replace('(', ' ')
+            line = line.replace(')', ' ')
+            line = line.strip()
+            strline = re.split(r'[;,\s]', line)
+            # print(strline)
+            if line == "Toolinfo":
+                signal = 1
+            if signal == 1:
+                dataSet.append(strline)
+        sheet1.write(rown, 0, os.path.basename(paths), set_style('Times New Roman', 220, True))
+        rown += 1
+        T = 0
+
+
+        # 生成数据
+        for i in range(1, len(dataSet)):
+            for j in range(0, 5):
+                if j == 0:
+                    sheet1.write(rown+i-1, j+1, dataSet[i][j], set_style('Times New Roman', 220, True))
+                else:
+                    sheet1.write(rown+i-1, j+1, float(dataSet[i][j]), set_style('Times New Roman', 220, True))
+                    if j == 4:
+                        T = T+float(dataSet[i][j])
+                        print(float(dataSet[i][j]))
+        zhehe ='G'+str(rown-1)+'/60'
+        zhehedanjia = 'G'+str(rown-1)+'*I'+str(rown-1)
+        tadd = 'SUM(F'+str(rown)+':F'+str(rown+len(dataSet))+')'
+        print(tadd)
+
+        sheet1.write(rown - 1, 6, xlwt.Formula(tadd))
+        # sheet1.write(rown - 1, 6, T, set_style('Times New Roman', 220), True))
+        sheet1.write(rown - 1, 7, xlwt.Formula(zhehe))
+        sheet1.write(rown - 1, 8, float(price), set_style('Times New Roman', 220, True))
+        sheet1.write(rown - 1, 9, xlwt.Formula(zhehedanjia))
+        rown += len(dataSet)-1
+        filen += 1
+
+
+    generate_xml_name = '777.xls'
+    geneate_xml_dir = os.path.join(os.path.dirname(paths), generate_xml_name)
+    f.save(geneate_xml_dir)  # 保存文件
+
